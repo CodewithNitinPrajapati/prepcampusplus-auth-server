@@ -30,8 +30,8 @@ function setSession(res, payload) {
   const token = jwt.sign(payload, process.env.SESSION_JWT_SECRET, { expiresIn: "7d" });
   res.cookie("pcp_session", token, {
     httpOnly: true,
-    secure: false, // local testing - later true on HTTPS server
-    sameSite: "lax",
+    secure: true,
+    sameSite: "none",
     maxAge: 7 * 86400 * 1000,
   });
 }
