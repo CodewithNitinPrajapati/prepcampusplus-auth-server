@@ -129,16 +129,23 @@ app.get(
       provider: "google",
     });
 
-    let returnUrl = req.query.return_url || "/campus-control";
+    let returnUrl = req.query.return_url;
 
-    // 🔐 Security: only allow same-site redirects
-    if (!returnUrl.startsWith("/")) {
+    // ✅ allow only relative paths
+    if (!returnUrl || !returnUrl.startsWith("/")) {
       returnUrl = "/campus-control";
     }
 
-    res.redirect(returnUrl);
+    // ✅ ALWAYS redirect to MAIN SITE
+    const finalRedirect =
+      process.env.NODE_ENV === "production"
+        ? `https://prepcampusplus.com${returnUrl}`
+        : `http://localhost:5500${returnUrl}`;
+
+    res.redirect(finalRedirect);
   }
 );
+
 
 
 /* =========================
