@@ -129,15 +129,17 @@ app.get(
       provider: "google",
     });
 
-    const returnUrl =
-      req.query.return_url ||
-      (process.env.NODE_ENV === "production"
-        ? "https://prepcampusplus.com/"
-        : "http://localhost:5500/");
+    let returnUrl = req.query.return_url || "/campus-control";
+
+    // 🔐 Security: only allow same-site redirects
+    if (!returnUrl.startsWith("/")) {
+      returnUrl = "/campus-control";
+    }
 
     res.redirect(returnUrl);
   }
 );
+
 
 /* =========================
    FIREBASE REST AUTH
