@@ -133,7 +133,7 @@ app.get(
 
     // ✅ allow only relative paths
     if (!returnUrl || !returnUrl.startsWith("/")) {
-      returnUrl = "/campus-control";
+      returnUrl = "/campus-control/";
     }
 
     // ✅ ALWAYS redirect to MAIN SITE
