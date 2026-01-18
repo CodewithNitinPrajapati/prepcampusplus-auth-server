@@ -304,27 +304,6 @@ app.post("/api/logout", (req, res) => {
 
 
 /* =========================
-   FORGOT PASSWORD
-========================= */
-app.post("/api/forgot-password", async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: "Email required" });
-    }
-
-    await admin.auth().generatePasswordResetLink(email);
-
-    res.json({ success: true });
-  } catch (err) {
-    // security: email exist hai ya nahi, expose mat karo
-    res.json({ success: true });
-  }
-});
-
-
-
-/* =========================
    404
 ========================= */
 app.use((req, res) => {
