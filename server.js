@@ -8,6 +8,7 @@ const passport = require("passport");
 const { Strategy: GoogleStrategy } = require("passport-google-oauth20");
 const admin = require("firebase-admin");
 const jwt = require("jsonwebtoken");
+
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
@@ -26,10 +27,9 @@ app.use(
 app.use(compression());
 
 /* =========================
-   CORS (STRICT)
+   CORS
 ========================= */
 const FRONTEND_ORIGIN = "https://prepcampusplus.com";
-
 app.use(
   cors({
     origin: FRONTEND_ORIGIN,
@@ -51,7 +51,7 @@ admin.initializeApp({
 app.use(passport.initialize());
 
 /* =========================
-   HEALTH CHECK (IMPORTANT)
+   HEALTH CHECK
 ========================= */
 app.get("/", (req, res) => {
   res.send("✅ PrepCampusPlus Auth Server Working");
@@ -79,7 +79,7 @@ function setSession(res, payload) {
 }
 
 /* =========================
-   GOOGLE OAUTH
+   GOOGLE STRATEGY
 ========================= */
 passport.use(
   new GoogleStrategy(
@@ -114,11 +114,32 @@ passport.use(
   )
 );
 
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["email", "profile"] })
-);
+/* =========================
+   GOOGLE LOGIN (START)
+   ✅ return_url preserved via STATE
+========================= */
+app.get("/auth/google", (req, res, next) => {
+  const returnUrl = req.query.return_url;
 
+  const safeReturn =
+    returnUrl && returnUrl.startsWith("/")
+      ? returnUrl
+      : "/campus-control/";
+
+  const state = Buffer.from(
+    JSON.stringify({ return_url: safeReturn })
+  ).toString("base64");
+
+  passport.authenticate("google", {
+    scope: ["email", "profile"],
+    state,
+  })(req, res, next);
+});
+
+/* =========================
+   GOOGLE CALLBACK
+   ✅ state decoded here
+========================= */
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { session: false }),
@@ -129,14 +150,22 @@ app.get(
       provider: "google",
     });
 
-    let returnUrl = req.query.return_url;
+    let returnUrl = "/campus-control/";
 
-    // ✅ allow only relative paths
-    if (!returnUrl || !returnUrl.startsWith("/")) {
-      returnUrl = "/campus-control/";
+    if (req.query.state) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(req.query.state, "base64").toString()
+        );
+        if (
+          decoded.return_url &&
+          decoded.return_url.startsWith("/")
+        ) {
+          returnUrl = decoded.return_url;
+        }
+      } catch {}
     }
 
-    // ✅ ALWAYS redirect to MAIN SITE
     const finalRedirect =
       process.env.NODE_ENV === "production"
         ? `https://prepcampusplus.com${returnUrl}`
@@ -145,8 +174,6 @@ app.get(
     res.redirect(finalRedirect);
   }
 );
-
-
 
 /* =========================
    FIREBASE REST AUTH
@@ -196,7 +223,7 @@ app.post("/api/signup", async (req, res) => {
 });
 
 /* =========================
-   LOGIN
+   LOGIN (EMAIL)
 ========================= */
 app.post("/api/login", async (req, res) => {
   try {
@@ -276,7 +303,7 @@ app.post("/api/logout", (req, res) => {
 });
 
 /* =========================
-   404 FALLBACK (ALWAYS LAST)
+   404
 ========================= */
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
